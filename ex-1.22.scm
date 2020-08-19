@@ -1,24 +1,34 @@
-(define (smallest-divisor n) (find-divisor n 2))
-
-(define (find-divisor n test-divisor)
-  (cond ((> (square test-divisor) n) n)
-        ((divides? test-divisor n) test-divisor)
-        (else (find-divisor n (+ test-divisor 1)))))
-
-(define (divides? a b) (= (remainder b a) 0))
-
-(define (prime? n)
-  (= n (smallest-divisor n)))
+(load "prime?.scm")
 
 (define (timed-prime-test n)
   (newline)
   (display n)
   (start-prime-test n (runtime)))
+
 (define (start-prime-test n start-time)
   (if (prime? n)
       (report-prime (- (runtime) start-time))))
+
 (define (report-prime elapsed-time)
   (display " *** ")
   (display elapsed-time))
 
-(timed-prime-test 9)
+(define (search-for-primes start end count)
+  (cond ((> count 2) (display "found 3 primes"))
+        ((> start end) (display "end of sequence"))
+        ((prime? start) (display start) (display "\n") (search-for-primes (+ start 2) end (+ count 1)))
+        ((search-for-primes (+ start 2) end count))))
+
+; (search-for-primes 1001 9999 0)
+; (search-for-primes 10001 99999 0)
+; (search-for-primes 100001 999999 0)
+; (search-for-primes 1000001 9999999 0)
+(timed-prime-test 1009) ; Some how warm up time takes a huge portion, this to design away that problem
+; (timed-prime-test 1009)
+; (timed-prime-test 10007)
+; Time from 2 -> 4
+
+; (timed-prime-test 100003)
+; (timed-prime-test 1000003)
+; Time from 9 -> 27
+; Conclusion: it's compatable
