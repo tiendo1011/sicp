@@ -1,9 +1,5 @@
-(define (square x) (* x x))
-
-(define (remainder a b)
-  (if (< a b)
-      a
-      (remainder (- a b) b)))
+(load "square.scm")
+(load "remainder.scm")
 
 (define (smallest-divisor n) (find-divisor n 2))
 
