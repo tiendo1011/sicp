@@ -1,0 +1,16 @@
+(load "cube.scm")
+
+(define (simpson-integral f a b n)
+  (define (compute-yk k h)
+    (f (+ a (* k h))))
+  (define (simpson-integral-iter k h)
+    (cond ((= k n) (compute-yk k h))
+          ((= k 0) (+ (compute-yk 0 h) (simpson-integral-iter 1 h)))
+          ((= (remainder k 2) 1) (+ (* 4 (compute-yk k h)) (simpson-integral-iter (+ k 1) h)))
+          ((= (remainder k 2) 0) (+ (* 2 (compute-yk k h)) (simpson-integral-iter (+ k 1) h)))))
+  (let ()
+    (define h (/ (- b a) n))
+    (* (/ h 3) (simpson-integral-iter 0 h))))
+
+(simpson-integral cube 0 1 100)
+(simpson-integral cube 0 1 1000)
