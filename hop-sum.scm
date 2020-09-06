@@ -1,6 +1,4 @@
-(define (sum term a next b)
-  (if (> a b)
-      0
-      (+ (term a)
-         (sum term (next a) next b))))
+(load "hop-accumulate.scm")
 
+(define (sum term a next b)
+  (accumulate + 0 term a next b))

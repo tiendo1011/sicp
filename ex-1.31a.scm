@@ -1,9 +1,5 @@
 (load "square.scm")
-
-(define (product term a next b)
-  (if (> a b)
-    1
-    (* (term a) (product term (next a) next b))))
+(load "hop-product.scm")
 
 (define (factorial n)
   (define (factorial-term x) x)
