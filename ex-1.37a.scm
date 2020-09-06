@@ -1,0 +1,16 @@
+(load "cont-frac.scm")
+(load "ex-1.37b.scm")
+
+; 1/φ ~ 0.6180
+(cont-frac (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           10)
+(cont-frac-iterative (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           10)
+(cont-frac (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           11)
+(cont-frac-iterative (lambda (i) 1.0)
+           (lambda (i) 1.0)
+           11)
