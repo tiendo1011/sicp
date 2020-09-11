@@ -16,4 +16,7 @@
       guess
       (sqrt-iter (improve guess x) x)))
 
-(sqrt-iter 1.0 1000000000000)
+(define (sqrt x)
+  (sqrt-iter 1.0 x))
+
+(sqrt 1000000000000)

@@ -3,9 +3,11 @@
   (define (close-enough? v1 v2)
     (< (abs (- v1 v2))
        tolerance))
-  (define (try guess)
+  (define (try guess try_count)
     (let ((next (f guess)))
-         (if (close-enough? guess next)
-             next
-             (try next))))
-  (try first-guess))
+         (cond ((> try_count 1000) (error "try overflow"))
+               ((close-enough? guess next) next)
+               (else (try next (+ try_count 1))))))
+  (try first-guess 1))
+
+(fixed-point cos 1.0)
