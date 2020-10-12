@@ -1,0 +1,51 @@
+(define (make-mobile left right)
+  (list left right))
+
+(define (make-branch length structure)
+  (list length structure))
+
+(define (left-branch mobile)
+  (car mobile))
+
+(define (right-branch mobile)
+  (car (cdr mobile)))
+
+(define (branch-length branch)
+  (car branch))
+
+(define (branch-structure branch)
+  (car (cdr branch)))
+
+(define (total-weight mobile)
+  (let ((lbranch-structure (branch-structure (left-branch mobile)))
+        (rbranch-structure (branch-structure (right-branch mobile))))
+    (cond ((and (not (pair? lbranch-structure)) (not (pair? rbranch-structure))) (+ lbranch-structure rbranch-structure))
+          ((and (pair? lbranch-structure) (pair? rbranch-structure)) (+ (total-weight lbranch-structure) (total-weight rbranch-structure)))
+          ((pair? lbranch-structure) (+ (total-weight lbranch-structure) rbranch-structure))
+          ((pair? rbranch-structure) (+ lbranch-structure (total-weight rbranch-structure))))))
+
+(define lbranch (list 1 4))
+(define r1branch (list 1 1))
+(define r2branch (list 1 1))
+(define sub-mobile (list r1branch r2branch))
+(define rbranch (list 2 sub-mobile))
+(define mobile (list lbranch rbranch))
+(total-weight mobile)
+
+(define (balanced? mobile)
+  (let ((lbranch-structure (branch-structure (left-branch mobile)))
+        (rbranch-structure (branch-structure (right-branch mobile)))
+        (lbranch-length (branch-length (left-branch mobile)))
+        (rbranch-length (branch-length (right-branch mobile))))
+    (cond ((and (not (pair? lbranch-structure)) (not (pair? rbranch-structure))) (= lbranch-structure rbranch-structure))
+          ((and (pair? lbranch-structure) (pair? rbranch-structure))
+           (and (= (* lbranch-length (total-weight lbranch-structure)) (* rbranch-length (total-weight rbranch-structure)))
+                (balanced? lbranch-structure) (balanced? rbranch-structure)))
+          ((pair? lbranch-structure)
+           (and (= (* lbranch-length (total-weight lbranch-structure)) rbranch-structure)
+                (balanced? lbranch-structure)))
+          ((pair? rbranch-structure)
+           (and (= lbranch-structure (* rbranch-length (total-weight rbranch-structure)))
+                (balanced? rbranch-structure))))))
+
+(balanced? mobile)

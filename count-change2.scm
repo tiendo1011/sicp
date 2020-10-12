@@ -41,3 +41,11 @@
 
 (count-change 100 us-coins) ; 292
 (count-change 51 us-coins) ; 50
+; Does the order of the list coin-values affect the answer produced by cc? No
+; Why or why not?
+; Because the assumption hold no matter the order
+; It needs the order to remains between computation though.
+; Assumption:
+; The number of ways to change amount a using n kinds of coins equals
+; • the number of ways to change amount a using all but the first kind of coin, plus
+; • the number of ways to change amount a − d using all n kinds of coins, where d is the denomination of the first kind of coin.
