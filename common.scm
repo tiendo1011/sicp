@@ -1,0 +1,5 @@
+(define (format-display desc item)
+  (newline)
+  (display desc)
+  (newline)
+  (display item))

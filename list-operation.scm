@@ -126,3 +126,32 @@
 
 (define (flatmap proc seq)
   (accumulate append nil (map proc seq)))
+
+(define (enumerate-interval low high)
+  (if (> low high)
+      nil
+      (cons low (enumerate-interval (+ low 1) high))))
+(enumerate-interval 2 7)
+
+(define (sum items)
+  (accumulate + 0 items))
+
+(define (remove item sequence)
+  (filter (lambda (x) (not (= x item)))
+          sequence))
+
+(define (permutations s)
+  (if (null? s)
+      (list nil)
+      (flatmap (lambda (x)
+                       (map (lambda (p) (cons x p))
+                            (permutations (remove x s))))
+               s)))
+
+(define (include? items item same?)
+  (any? items (lambda (x) (same? x item))))
+
+(define (any? items predicate)
+  (cond ((null? items) false)
+        ((predicate (car items)) true)
+        (else (any? (cdr items) predicate))))
