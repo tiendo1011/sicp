@@ -8,3 +8,10 @@ Setup follow the instruction here:
 https://crash.net.nz/posts/2014/08/configuring-vim-for-sicp/
 Only one difference, I use this version of tslime instead of the one
 mentioned in the post: https://github.com/jgdavey/tslime.vim
+
+What I have learned so far:
+- Abstraction barrier is important, it allows you to focus on one level at the time.
+- Recursive procedure forms different process form, either linear
+iteractive, linear recursive, or tree recursive. Focus on how many
+times it calls itself at each iteration will tell you which form it'll
+produce when run. A good exercise help me understand it is Ex-2.43
