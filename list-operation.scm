@@ -155,3 +155,17 @@
   (cond ((null? items) false)
         ((predicate (car items)) true)
         (else (any? (cdr items) predicate))))
+
+(define (findIndex items item)
+  (define (iter sequence item currentIndex)
+    (cond ((null? sequence) -1)
+          ((equal? (car sequence) item) currentIndex)
+          (else (iter (cdr sequence) item (+ currentIndex 1)))))
+  (if (null? items)
+      -1
+      (iter items item 0)))
+
+(define (slice items startIndex endIndex)
+  (map
+    (lambda (x) (list-ref items x))
+    (enumerate-interval startIndex endIndex)))
