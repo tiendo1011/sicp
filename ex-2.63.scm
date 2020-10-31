@@ -98,6 +98,7 @@
 ;      ...
 ; There will be log(n) calls, so we have log(n) * n/2 times
 ; It's nlog(n) Time complexity
+; More elaborate explanation: https://stackoverflow.com/a/62259068/4632735
 
 ; For tree->list-2:
 ; T(n) = 2*T(n/2)
