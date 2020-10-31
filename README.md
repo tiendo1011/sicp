@@ -15,3 +15,7 @@ What I have learned so far:
 iteractive, linear recursive, or tree recursive. Focus on how many
 times it calls itself at each iteration will tell you which form it'll
 produce when run. A good exercise help me understand it is Ex-2.43
+- Although the number of calls a procedure makes to itself will form the
+procedure shape, the time complexity also depends on the number of
+elements we feed to the call after each step. A good exercise help me
+understand this is Ex-2.63b
