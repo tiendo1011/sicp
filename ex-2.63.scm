@@ -97,6 +97,7 @@
 ;      = n/2 + n/2 + 4*t(n/4)
 ;      ...
 ; There will be log(n) calls, so we have log(n) * n/2 times
+; 4*T(n/4) has O(n) complexity
 ; It's nlog(n) Time complexity
 ; More elaborate explanation: https://stackoverflow.com/a/62259068/4632735
 
