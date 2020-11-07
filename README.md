@@ -19,3 +19,13 @@ produce when run. A good exercise help me understand it is Ex-2.43
 procedure shape, the time complexity also depends on the number of
 elements we feed to the call after each step. A good exercise help me
 understand this is Ex-2.63b
+- Master theorem is a good way to determine run time complexity of
+recursive call.
+With T(n) = aT(n/b) + f(n)
+If n^(logb(a)) and f(n) has polynomial difference then it falls into 3
+cases:
+1. Work to split/recombine a problem is dwarfed by subproblems.
+2. Work to split/recombine a problem is comparable to subproblems.
+3. Work to split/recombine a problem dominates subproblems.
+Which determine its run time complexity (more in
+[wiki](https://en.wikipedia.org/wiki/Master_theorem_(analysis_of_algorithms)))
