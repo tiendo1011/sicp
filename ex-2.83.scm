@@ -1,0 +1,25 @@
+(define (install-scheme-number-package)
+  (define (raise x)
+    (((get 'make 'rational) (contents x) 1)))
+  (put 'raise 'scheme-number raise)
+  'done)
+
+; Assume that we have 'make-real procedure
+(define (install-rational-package)
+  (define (raise x)
+    (((get 'make 'real) (/ (car (contents x)) (cdr (contents x))))))
+  (put 'raise 'rational raise)
+  'done)
+
+(define (install-real-package)
+  (define (raise x)
+    (((get 'make-from-real-image 'complex) (contents x) 0)))
+  (put 'raise 'real raise)
+  'done)
+
+(define (install-raise-package)
+  (define (raise x)
+    (let ((x-type (type-tag-x)))
+      (if (= x-type 'complex)
+          (error "can't raise complex")
+          ((get 'raise x-type) x)))))

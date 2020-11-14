@@ -3,6 +3,11 @@
       (car items)
       (list-ref (cdr items) (- n 1))))
 
+(define (list-ax-ref items n)
+  (cond ((null? items) '())
+        ((= n 0) (list-ax-ref (cdr items) (- n 1)))
+        (else (cons (car items) (list-ax-ref (cdr items) (- n 1))))))
+
 (define (length items)
   (accumulate (lambda (x y) (+ 1 y)) 0 items))
 
@@ -102,7 +107,16 @@
   nil
   ((proc (car items))
    (cons (car items)
-         (map proc (cdr items))))))
+         (for-each proc (cdr items))))))
+
+(define (for-each-with-index proc items)
+  (define (iter proc items current-index)
+    (if (null? items)
+        nil
+        ((proc (car items) current-index)
+         (cons (car items)
+               (iter proc (cdr items) (+ current-index 1))))))
+  (iter proc items 0))
 
 (define seqs (list (list 1 2 3) (list 4 5 6)))
 (define (cars seqs)
@@ -156,7 +170,7 @@
         ((predicate (car items)) true)
         (else (any? (cdr items) predicate))))
 
-(define (findIndex items item)
+(define (find-index items item)
   (define (iter sequence item currentIndex)
     (cond ((null? sequence) -1)
           ((equal? (car sequence) item) currentIndex)
