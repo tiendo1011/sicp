@@ -45,7 +45,7 @@
   (let ((type-tags (map type-tag args)))
        (let ((proc (get op type-tags)))
             (if proc
-                (drop (apply proc (map contents args))) ; We add proc here
+                (drop (apply proc (map contents args))) ; We add drop here
                 (if (same-type? type-tags)
                     (error "No method found for" (list op type-tags))
                     (for-each-with-index
