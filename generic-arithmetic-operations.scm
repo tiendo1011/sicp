@@ -31,9 +31,15 @@
 (define (mul x y) (apply-generic 'mul x y))
 (define (div x y) (apply-generic 'div x y))
 (define (=zero? x) (apply-generic '=zero? x))
+(define (gcd x y) (apply-generic 'gcd x y))
+(define (negate x) (apply-generic 'negate x))
 
 (define (install-scheme-number-package)
   (define (tag x) (attach-tag 'scheme-number x))
+  (define (gcd-scheme-number a b)
+    (if (= b 0)
+        a
+        (gcd-scheme-number b (remainder a b))))
   (put 'add '(scheme-number scheme-number)
        (lambda (x y) (tag (+ x y))))
   (put 'sub '(scheme-number scheme-number)
@@ -42,11 +48,13 @@
        (lambda (x y) (tag (* x y))))
   (put 'div '(scheme-number scheme-number)
        (lambda (x y) (tag (/ x y))))
-  (put 'negate 'scheme-number
+  (put 'negate '(scheme-number)
        (lambda (x) (tag (- x))))
-  (put 'make 'scheme-number (lambda (x) (tag x)))
   (put '=zero? '(scheme-number)
        (lambda (x) (= x 0)))
+  (put 'gcd '(scheme-number scheme-number)
+       (lambda (a b) (tag (gcd-scheme-number a b))))
+  (put 'make 'scheme-number (lambda (x) (tag x)))
   'done)
 
 (define (make-scheme-number n)
@@ -56,7 +64,9 @@
   ;; internal procedures
   (define (numer x) (car x))
   (define (denom x) (cdr x))
-  (define (make-rat n d) (cons n d))
+  (define (make-rat n d)
+    (let ((g (gcd n d)))
+         (cons (div n g) (div d g))))
   (define (add-rat x y)
     (make-rat (add (mul (numer x) (denom y))
                    (mul (numer y) (denom x)))
@@ -81,12 +91,12 @@
        (lambda (x y) (tag (mul-rat x y))))
   (put 'div '(rational rational)
        (lambda (x y) (tag (div-rat x y))))
-  (put 'negate 'rational
+  (put 'negate '(rational)
        (lambda (x) (tag (make-rat (- (numer x)) (denom x)))))
-  (put 'make 'rational
-       (lambda (n d) (tag (make-rat n d))))
   (put '=zero? '(rational)
        (lambda (x) (= (numer x))))
+  (put 'make 'rational
+       (lambda (n d) (tag (make-rat n d))))
   'done)
 
 (define (make-rational n d)
@@ -121,16 +131,16 @@
        (lambda (z1 z2) (tag (mul-complex z1 z2))))
   (put 'div '(complex complex)
        (lambda (z1 z2) (tag (div-complex z1 z2))))
-  (put 'negate 'complex
+  (put 'negate '(complex)
        (lambda (z) (tag (make-from-real-imag (- (real-part z)) (- (imag-part z))))))
-  (put 'make-from-real-imag 'complex
-       (lambda (x y) (tag (make-from-real-imag x y))))
-  (put 'make-from-mag-ang 'complex
-       (lambda (r a) (tag (make-from-mag-ang r a))))
   (put '=zero? '(complex)
        (lambda (x) (and
                        (= (real-part x) 0)
                        (= (imag-part x) 0))))
+  (put 'make-from-real-imag 'complex
+       (lambda (x y) (tag (make-from-real-imag x y))))
+  (put 'make-from-mag-ang 'complex
+       (lambda (r a) (tag (make-from-mag-ang r a))))
   'done)
 
 (define (make-complex-from-real-imag x y)
@@ -196,7 +206,7 @@
         (error "Polys not in same var: SUB-POLY" (list p1 p2))))
 
   (define (sub-terms L1 L2)
-    (cond ((empty-termlist? L1) (negate L2))
+    (cond ((empty-termlist? L1) (negate-terms L2))
           ((empty-termlist? L2) L1)
           (else
             (let ((t1 (first-term L1))
@@ -206,7 +216,7 @@
                           t1 (sub-terms (rest-terms L1) L2)))
                        ((< (order t1) (order t2))
                         (adjoin-term
-                          (negate t2) (sub-terms L1 (rest-terms L2))))
+                          (negate-term t2) (sub-terms L1 (rest-terms L2))))
                        (else
                          (adjoin-term
                            (make-term (order t1)
@@ -221,11 +231,13 @@
     (if (empty-termlist? L)
         L
         (adjoin-term
-          (negate (first-term L))
+          (negate-term (first-term L))
           (negate-terms (rest-terms L)))))
 
+  (define (negate-term t)
+    (make-term (order t) (negate (coeff t))))
+
   (define (mul-poly p1 p2)
-    (p p1 p2)
     (if (same-variable? (variable p1) (variable p2))
         (make-poly (variable p1)
                    (mul-terms (term-list p1) (term-list p2)))
@@ -239,8 +251,6 @@
     (if (empty-termlist? L)
         (the-empty-termlist)
         (let ((t2 (first-term L)))
-          (p "terms" t1 t2)
-          (p "coeff " (coeff t1) (coeff t2))
              (adjoin-term
                (make-term (+ (order t1) (order t2))
                           (mul (coeff t1) (coeff t2)))
@@ -262,8 +272,29 @@
                  (let ((new-c (div (coeff t1) (coeff t2)))
                        (new-o (- (order t1) (order t2))))
                       (let ((rest-of-result
-                              (div-terms (sub-terms L1 (mul-terms (make-term new-o new-c) L2)) L2)))
-                           (cons (make-term new-o new-c) rest-of-result)))))))
+                              (div-terms (sub-terms L1 (mul-term-by-all-terms (make-term new-o new-c) L2)) L2)))
+                           (list
+                             (adjoin-term (make-term new-o new-c) (car rest-of-result))
+                             (cadr rest-of-result))))))))
+
+  (put 'div-terms 'polynomial
+       (lambda (x y)
+         (div-terms x y)))
+
+  (define (gcd-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly (variable p1)
+                   (gcd-terms (term-list p1) (term-list p2)))
+        (error "Polys not in same var: GCD-POLY" (list p1 p2))))
+
+  (define (gcd-terms a b)
+    (p "gcd-terms: " a b)
+    (if (empty-termlist? b)
+        a
+        (gcd-terms b (remainder-terms a b))))
+
+  (define (remainder-terms a b)
+    (cadr (div-terms a b)))
 
   ;; interface to rest of the system
   (define (tag p) (attach-tag 'polynomial p))
@@ -275,12 +306,14 @@
        (lambda (p1 p2) (tag (mul-poly p1 p2))))
   (put 'div '(polynomial polynomial)
        (lambda (p1 p2) (tag (div-poly p1 p2))))
-  (put 'negate 'polynomial
+  (put 'negate '(polynomial)
        (lambda (p) (tag (negate-poly p))))
-  (put 'make 'polynomial
-       (lambda (var terms) (tag (make-poly var terms))))
   (put 'zero? '(polynomial)
        (lambda (x) (=poly-zero? x)))
+  (put 'gcd '(polynomial polynomial)
+       (lambda (p1 p2) (tag (gcd-poly p1 p2))))
+  (put 'make 'polynomial
+       (lambda (var terms) (tag (make-poly var terms))))
   'done)
 
 (define (make-polynomial var terms)
