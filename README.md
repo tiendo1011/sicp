@@ -29,3 +29,4 @@ cases:
 3. Work to split/recombine a problem dominates subproblems.
 Which determine its run time complexity (more in
 [wiki](https://en.wikipedia.org/wiki/Master_theorem_(analysis_of_algorithms)))
+- To log effectively, you need to be clear about what you want to know first
