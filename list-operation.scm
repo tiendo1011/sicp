@@ -1,3 +1,5 @@
+(load "base.scm")
+
 (define (list-ref items n)
   (if (= n 0)
       (car items)
@@ -102,13 +104,6 @@
 (define (map proc items)
   (accumulate (lambda (x y) (cons (proc x) y)) nil items))
 
-(define (for-each proc items)
-  (if (null? items)
-  nil
-  ((proc (car items))
-   (cons (car items)
-         (for-each proc (cdr items))))))
-
 (define (for-each-with-index proc items)
   (define (iter proc items current-index)
     (if (null? items)
@@ -183,3 +178,12 @@
   (map
     (lambda (x) (list-ref items x))
     (enumerate-interval startIndex endIndex)))
+
+(define (concat list1 list2)
+  (define (iter list1 list2)
+    (if (null? list1)
+        list2
+        (iter (cdr list1) (cons (car list1) list2))))
+  (if (null? list1)
+      list2
+      (iter (reverse list1) list2)))

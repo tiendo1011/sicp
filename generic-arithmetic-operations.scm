@@ -1,5 +1,6 @@
 (load "base.scm")
 (load "get-put.scm")
+(load "list-operation.scm")
 
 (define (attach-tag type-tag contents)
   (if (number? contents)
@@ -33,6 +34,7 @@
 (define (=zero? x) (apply-generic '=zero? x))
 (define (gcd x y) (apply-generic 'gcd x y))
 (define (negate x) (apply-generic 'negate x))
+(define (reduce x y) (apply-generic 'reduce x y))
 
 (define (install-scheme-number-package)
   (define (tag x) (attach-tag 'scheme-number x))
@@ -40,6 +42,11 @@
     (if (= b 0)
         a
         (gcd-scheme-number b (remainder a b))))
+
+  (define (reduce-integers n d)
+    (let ((g (gcd n d)))
+         (list (/ n g) (/ d g))))
+
   (put 'add '(scheme-number scheme-number)
        (lambda (x y) (tag (+ x y))))
   (put 'sub '(scheme-number scheme-number)
@@ -54,6 +61,11 @@
        (lambda (x) (= x 0)))
   (put 'gcd '(scheme-number scheme-number)
        (lambda (a b) (tag (gcd-scheme-number a b))))
+  (put 'reduce '(scheme-number scheme-number)
+       (lambda (a b) (let ((reduced-integers (reduced-integers a b)))
+                       (cons
+                         (tag (car reduced-integers))
+                         (tag (cadr reduce-integers))))))
   (put 'make 'scheme-number (lambda (x) (tag x)))
   'done)
 
@@ -65,8 +77,7 @@
   (define (numer x) (car x))
   (define (denom x) (cdr x))
   (define (make-rat n d)
-    (let ((g (gcd n d)))
-         (cons (div n g) (div d g))))
+    (reduce n d))
   (define (add-rat x y)
     (make-rat (add (mul (numer x) (denom y))
                    (mul (numer y) (denom x)))
@@ -135,8 +146,8 @@
        (lambda (z) (tag (make-from-real-imag (- (real-part z)) (- (imag-part z))))))
   (put '=zero? '(complex)
        (lambda (x) (and
-                       (= (real-part x) 0)
-                       (= (imag-part x) 0))))
+                     (= (real-part x) 0)
+                     (= (imag-part x) 0))))
   (put 'make-from-real-imag 'complex
        (lambda (x y) (tag (make-from-real-imag x y))))
   (put 'make-from-mag-ang 'complex
@@ -279,22 +290,66 @@
 
   (put 'div-terms 'polynomial
        (lambda (x y)
-         (div-terms x y)))
+               (div-terms x y)))
 
   (define (gcd-poly p1 p2)
     (if (same-variable? (variable p1) (variable p2))
         (make-poly (variable p1)
-                   (gcd-terms (term-list p1) (term-list p2)))
+                   (let* ((gcd-result (gcd-terms (term-list p1) (term-list p2)))
+                          (factor (find-termlist-coeff-gcd gcd-result)))
+                     (reduce-termlist-coeff-by-factor gcd-result factor)))
         (error "Polys not in same var: GCD-POLY" (list p1 p2))))
 
   (define (gcd-terms a b)
-    (p "gcd-terms: " a b)
     (if (empty-termlist? b)
         a
-        (gcd-terms b (remainder-terms a b))))
+        (gcd-terms b (pseudoremainder-terms a b))))
+
+  (define (find-termlist-coeff-gcd termlist)
+    (let* ((coefflist (map (lambda (term) (coeff term)) termlist)))
+          (cond ((null? coefflist) (error "no element in termlist"))
+                ((= (length coefflist) 1) (car coefflist))
+                ((= (length coefflist) 2) (gcd (car coefflist) (cadr coefflist)))
+                (else (gcd (car coefflist) (find-termlist-coeff-gcd (cdr termlist)))))))
+
+  (define (reduce-termlist-coeff-by-factor termlist factor)
+    (map (lambda (term) (make-term (order term) (div (coeff term) factor))) termlist))
 
   (define (remainder-terms a b)
     (cadr (div-terms a b)))
+
+  (define (pseudoremainder-terms p q)
+    (let* ((o1 (order (first-term p)))
+           (o2 (order (first-term q)))
+           (c (coeff (first-term q)))
+           (integerizing-factor (expt c (sub (add 1 o1) o2))))
+          (cadr (div-terms
+                  (mul-term-by-all-terms
+                    (make-term 0 integerizing-factor) p)
+                  q))))
+
+  (define (reduce-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (let ((reduced-terms (reduce-terms (term-list p1) (term-list p2))))
+          (list (make-poly (variable p1) (car reduced-terms))
+                (make-poly (variable p1) (cadr reduced-terms))))
+        (error "Polys not in same var: REDUCE-POLY" (list p1 p2))))
+
+  (define (reduce-terms n d)
+    (let* ((gcd-n-d (gcd-terms n d))
+           (o2 (order (first-term gcd-n-d)))
+           (o1-n (order (first-term n)))
+           (o1-d (order (first-term d)))
+           (o1 (if (> o1-n o1-d)
+                   o1-n
+                   o1-d))
+           (integerizing-factor (expt (coeff (first-term gcd-n-d)) (sub (add 1 o1) o2)))
+           (numerator-terms (car (div-terms (mul-term-by-all-terms (make-term 0 integerizing-factor) n) gcd-n-d)))
+           (denominator-terms (car (div-terms (mul-term-by-all-terms (make-term 0 integerizing-factor) d) gcd-n-d)))
+           (factor (find-termlist-coeff-gcd (concat numerator-terms denominator-terms))))
+         (list
+           (reduce-termlist-coeff-by-factor numerator-terms factor)
+           (reduce-termlist-coeff-by-factor denominator-terms factor))))
 
   ;; interface to rest of the system
   (define (tag p) (attach-tag 'polynomial p))
@@ -312,6 +367,11 @@
        (lambda (x) (=poly-zero? x)))
   (put 'gcd '(polynomial polynomial)
        (lambda (p1 p2) (tag (gcd-poly p1 p2))))
+  (put 'reduce '(polynomial polynomial)
+       (lambda (p1 p2) (let ((reduced-poly (reduce-poly p1 p2)))
+                        (cons
+                          (tag (car reduced-poly))
+                          (tag (cadr reduced-poly))))))
   (put 'make 'polynomial
        (lambda (var terms) (tag (make-poly var terms))))
   'done)
