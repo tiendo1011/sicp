@@ -187,3 +187,14 @@
   (if (null? list1)
       list2
       (iter (reverse list1) list2)))
+
+(define (append! x y)
+  (set-cdr! (last-pair x) y)
+  x)
+
+(define (last-pair x)
+  (if (null? (cdr x)) x (last-pair (cdr x))))
+
+(define (make-cycle x)
+  (set-cdr! (last-pair x) x)
+  x)

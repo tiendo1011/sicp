@@ -6,8 +6,13 @@ book ((runtime), for eg). So I moved to run the code on my local machine.
 
 Setup follow the instruction here:
 https://crash.net.nz/posts/2014/08/configuring-vim-for-sicp/
-Only one difference, I use this version of tslime instead of the one
+With some modifications:
+1. I use this version of tslime instead of the one
 mentioned in the post: https://github.com/jgdavey/tslime.vim
+2. I don't use paredit.vim, the auto complete parentheses
+features make it hard to delete things when I want, also hard to add
+things when I want, and some vim movement doesn't work (J, O...) so it's
+not worth it.
 
 What I have learned so far:
 - Abstraction barrier is important, it allows you to focus on one level at the time.
