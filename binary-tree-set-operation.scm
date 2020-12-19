@@ -23,5 +23,13 @@
          (make-tree (entry set) (left-branch set)
                     (adjoin-set x (right-branch set))))))
 
-; turn set into ordered list, then apply union-set to an ordered-set,
-; then turn it back to a balanced tree
+(define (key val)
+  val)
+
+(define (lookup given-key set-of-records)
+  (cond ((null? set-of-records) false)
+        ((equal? given-key (key (entry set-of-records)))
+         (entry set-of-records))
+        ((< given-key (key (entry set-of-records)))
+         (lookup given-key (left-branch set-of-records)))
+        (else (lookup given-key (right-branch set-of-records)))))

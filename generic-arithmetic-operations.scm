@@ -1,5 +1,5 @@
 (load "base.scm")
-(load "get-put.scm")
+(load "two-dimentional-table.scm")
 (load "list-operation.scm")
 
 (define (attach-tag type-tag contents)

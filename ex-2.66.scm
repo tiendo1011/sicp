@@ -1,7 +1,5 @@
-(define (lookup given-key set-of-records)
-  (cond ((null? set-of-records) false)
-        ((equal? given-key (key (entry set-of-records)))
-         (entry set-of-records))
-        ((< given-key (key (entry set-of-records)))
-         (lookup given-key (left-branch set-of-records)))
-        (else (lookup given-key (right-branch set-of-records)))))
+(load "binary-tree-set-operation.scm")
+
+(define tree1 (adjoin-set 1 '()))
+(define tree2 (adjoin-set 2 tree1))
+(lookup 2 tree2)
