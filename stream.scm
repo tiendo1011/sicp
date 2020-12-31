@@ -1,15 +1,4 @@
-(define (cons-stream a b)
-  (cons a (delay b)))
-
-(define (delay exp)
-  (lambda () exp))
-
-; Here is just an idea of how cons-stream & delay work, but in practice
-; they needs to be special form
-; otherwise calling (cons-stream a b) will cause a & b to be evaluated,
-; before assigning to cons-stream params, which is not what we want
-
-(define (force delayed-object) (delayed-object))
+; DrRacket already provide cons-stream, delay & force operation
 
 (define (stream-car stream) (car stream))
 (define (stream-cdr stream) (force (cdr stream)))
@@ -26,6 +15,14 @@
       the-empty-stream
       (cons-stream (proc (stream-car s))
                    (stream-map proc (stream-cdr s)))))
+
+(define (stream-map proc . argstreams)
+  (if (stream-null? (car argstreams))
+      the-empty-stream
+      (cons-stream
+       (apply proc (map (lambda (stream) (stream-car stream)) argstreams))
+       (apply stream-map
+              (cons proc (map (lambda (stream) (stream-cdr stream)) argstreams))))))
 
 (define (stream-ref s n)
   (if (= n 0)
@@ -50,3 +47,35 @@
 (define (display-stream s)
   (stream-for-each display-line s))
 (define (display-line x) (newline) (display x))
+
+(define (add-streams s1 s2) (stream-map + s1 s2))
+
+(define (mul-streams s1 s2) (stream-map * s1 s2))
+
+(define (scale-stream stream factor)
+(stream-map (lambda (x) (* x factor))
+stream))
+
+(define (integers-starting-from n)
+  (cons-stream n (integers-starting-from (+ n 1))))
+(define integers (integers-starting-from 1))
+
+(define (merge s1 s2)
+  (cond ((stream-null? s1) s2)
+        ((stream-null? s2) s1)
+        (else
+          (let ((s1car (stream-car s1))
+                (s2car (stream-car s2)))
+               (cond ((< s1car s2car)
+                      (cons-stream
+                        s1car
+                        (merge (stream-cdr s1) s2)))
+                     ((> s1car s2car)
+                      (cons-stream
+                        s2car
+                        (merge s1 (stream-cdr s2))))
+                     (else
+                       (cons-stream
+                         s1car
+                         (merge (stream-cdr s1)
+                                (stream-cdr s2)))))))))
