@@ -1,7 +1,12 @@
 ; DrRacket already provide cons-stream, delay & force operation
 
-(define (stream-car stream) (car stream))
-(define (stream-cdr stream) (force (cdr stream)))
+; I noted the implementation in the book here for reference
+; (define (cons-stream a b) (cons a (delay b)))
+; (define (delay exp) (lambda () exp))
+; (define (force delayed-object) (delayed-object))
+
+(define (stream-car s) (car s))
+(define (stream-cdr s) (force (cdr s)))
 
 (define (stream-enumerate-interval low high)
   (if (> low high)
@@ -52,6 +57,8 @@
 
 (define (mul-streams s1 s2) (stream-map * s1 s2))
 
+(define (div-streams s1 s2) (stream-map / s1 s2))
+
 (define (scale-stream stream factor)
 (stream-map (lambda (x) (* x factor))
 stream))
@@ -79,3 +86,35 @@ stream))
                          s1car
                          (merge (stream-cdr s1)
                                 (stream-cdr s2)))))))))
+
+(define (memo-proc proc)
+  (let ((already-run? false) (result false))
+       (lambda ()
+               (if (not already-run?)
+                   (begin (set! result (proc))
+                          (set! already-run? true)
+                          result)
+                   result))))
+
+; equals to
+(define memo-proc (lambda (proc)
+  ((lambda (already-run? result)
+       (lambda () ; (1)
+               (if (not already-run?)
+                   (begin (set! result (proc))
+                          (set! already-run? true)
+                          result)
+                   result))) false false)))
+
+; (delay exp)
+; is equals to
+(memo-proc (lambda () exp))
+; What does memo-proc calls returns?
+; a procedure object, which is the result of evaluating lambda at (1)
+; this procedure object has access to already-run? & result
+
+; What happens when you force it?
+; you evaluate the procedure object, which triggers the evaluation of the body
+; which set already-run? to true, result to the result of exp
+; If you force it again, it'll return the result without evaluating the exp
+
