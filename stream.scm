@@ -63,9 +63,21 @@
 (stream-map (lambda (x) (* x factor))
 stream))
 
+(define (partial-sums s)
+  (define s-partial-sums-stream
+    (cons-stream (stream-car s) (add-streams s-partial-sums-stream (stream-cdr s))))
+  s-partial-sums-stream)
+
 (define (integers-starting-from n)
   (cons-stream n (integers-starting-from (+ n 1))))
 (define integers (integers-starting-from 1))
+
+(define (display-stream-with-limit stream limit)
+  (if (> limit 0)
+      (begin
+        (display (stream-car stream))
+        (display " ")
+        (display-stream-with-limit (stream-cdr stream) (- limit 1)))))
 
 (define (merge s1 s2)
   (cond ((stream-null? s1) s2)
@@ -117,4 +129,3 @@ stream))
 ; you evaluate the procedure object, which triggers the evaluation of the body
 ; which set already-run? to true, result to the result of exp
 ; If you force it again, it'll return the result without evaluating the exp
-
