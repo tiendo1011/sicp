@@ -4,7 +4,7 @@
       trials
       (lambda () (P (random-in-range x1 x2) (random-in-range y1 y2))))
     (* (- x2 x1) (- y2 y1))
-    1.0))
+    1.0)) ; without 1.0, the result would be something like 27001584/1000001
 
 (define (random-in-range low high)
   (let ((range (- high low)))
@@ -25,4 +25,4 @@
 (define (P x y)
   (<= (+ (expt (- x 5) 2) (expt (- y 7) 2)) (expt 3 2)))
 
-(/ (estimate-integral P 2 8 4 10 1000000) (expt 3 2))
+(estimate-integral P 2 8 4 10 1000000) ; ~ 27.0
