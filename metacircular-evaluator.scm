@@ -1,4 +1,4 @@
-(define (eval exp env)
+(define (m-eval exp env)
   (cond ((self-evaluating? exp) exp)
         ((variable? exp) (lookup-variable-value exp env))
         ((quoted? exp) (text-of-quotation exp))
@@ -10,14 +10,14 @@
                                        env))
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
-        ((cond? exp) (eval (cond->if exp) env))
+        ((cond? exp) (m-eval (cond->if exp) env))
         ((application? exp)
-         (apply (eval (operator exp) env)
+         (m-apply (m-eval (operator exp) env)
                 (list-of-values (operands exp) env)))
         (else
           (error "Unknown expression type: EVAL" exp))))
 
-(define (apply procedure arguments)
+(define (m-apply procedure arguments)
   (cond ((primitive-procedure? procedure)
          (apply-primitive-procedure procedure arguments))
         ((compound-procedure? procedure)
@@ -34,30 +34,30 @@
 (define (list-of-values exps env)
   (if (no-operands? exps)
       '()
-      (cons (eval (first-operand exps) env)
+      (cons (m-eval (first-operand exps) env)
             (list-of-values (rest-operands exps) env))))
 
 (define (eval-if exp env)
-  (if (true? (eval (if-predicate exp) env))
-      (eval (if-consequent exp) env)
-      (eval (if-alternative exp) env)))
+  (if (true? (m-eval (if-predicate exp) env))
+      (m-eval (if-consequent exp) env)
+      (m-eval (if-alternative exp) env)))
 
 (define (eval-sequence exps env)
   (cond ((last-exp? exps)
-         (eval (first-exp exps) env))
+         (m-eval (first-exp exps) env))
         (else
-          (eval (first-exp exps) env)
+          (m-eval (first-exp exps) env)
           (eval-sequence (rest-exps exps) env))))
 
 (define (eval-assignment exp env)
   (set-variable-value! (assignment-variable exp)
-                       (eval (assignment-value exp) env)
+                       (m-eval (assignment-value exp) env)
                        env)
   'ok)
 
 (define (eval-definition exp env)
   (define-variable! (definition-variable exp)
-    (eval (definition-value exp) env)
+    (m-eval (definition-value exp) env)
     env)
   'ok)
 
@@ -66,7 +66,8 @@
         ((string? exp) true)
         (else false)))
 
-(define (variable? exp) (symbol? exp))
+(define (variable? exp)
+  (symbol? exp))
 
 (define (quoted? exp) (tagged-list? exp 'quote))
 (define (text-of-quotation exp) (cadr exp))
@@ -231,7 +232,6 @@
        (define-variable! 'true true initial-env)
        (define-variable! 'false false initial-env)
        initial-env))
-(define the-global-environment (setup-environment))
 (define (primitive-procedure? proc)
   (tagged-list? proc 'primitive))
 (define (primitive-implementation proc) (cadr proc))
@@ -246,9 +246,8 @@
 (define (primitive-procedure-objects)
   (map (lambda (proc) (list 'primitive (cadr proc)))
        primitive-procedures))
-(define apply-in-underlying-scheme apply)
 (define (apply-primitive-procedure proc args)
-  (apply-in-underlying-scheme
+  (apply
     (primitive-implementation proc) args))
 (define input-prompt
   ";;; M-Eval input:")
@@ -256,7 +255,7 @@
 (define (driver-loop)
   (prompt-for-input input-prompt)
   (let ((input (read)))
-       (let ((output (eval input the-global-environment)))
+       (let ((output (m-eval input the-global-environment)))
             (announce-output output-prompt)
             (user-print output)))
   (driver-loop))
@@ -271,3 +270,12 @@
                      (procedure-body object)
                      '<procedure-env>))
       (display object)))
+
+(define the-global-environment (setup-environment))
+(driver-loop)
+
+(define (append x y)
+  (if (null? x)
+      y
+      (cons (car x) (append (cdr x) y))))
+(append '(a b c) '(d e f))
