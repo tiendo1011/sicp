@@ -11,6 +11,8 @@
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (m-eval (cond->if exp) env))
+        ((and? exp) (m-eval (and->if exp) env))
+        ((or? exp) (m-eval (or->if exp) env))
         ((application? exp)
          (m-apply (m-eval (operator exp) env)
                 (list-of-values (operands exp) env)))
@@ -162,6 +164,30 @@
                         (sequence->exp (cond-actions first))
                         (expand-clauses rest))))))
 
+(define (and? exp) (tagged-list? exp 'and))
+(define (and-clauses exp) (cdr exp))
+(define (and->if exp) (expand-and-clauses (and-clauses exp)))
+(define (expand-and-clauses clauses)
+  (if (null? clauses)
+      'true
+      (let ((first (car clauses))
+            (rest (cdr clauses)))
+           (make-if first
+                    (expand-and-clauses rest)
+                    'false))))
+
+(define (or? exp) (tagged-list? exp 'or))
+(define (or-clauses exp) (cdr exp))
+(define (or->if exp) (expand-or-clauses (or-clauses exp)))
+(define (expand-or-clauses clauses)
+  (if (null? clauses)
+      'false
+      (let ((first (car clauses))
+            (rest (cdr clauses)))
+           (make-if first
+                    'true
+                    (expand-or-clauses rest)))))
+
 (define (true? x)
   (not (eq? x false)))
 (define (false? x) (eq? x false))
@@ -279,3 +305,7 @@
       y
       (cons (car x) (append (cdr x) y))))
 (append '(a b c) '(d e f))
+(and true false false)
+(and true true true)
+(or true false false)
+(or true true true)
