@@ -98,6 +98,8 @@
       (caddr exp)
       (make-lambda (cdadr exp) ; formal parameters
                    (cddr exp)))) ; body
+(define (make-definition variable value)
+  (list 'define variable value))
 
 (define (lambda? exp) (tagged-list? exp 'lambda))
 (define (lambda-parameters exp) (cadr exp))
@@ -186,10 +188,34 @@
 ; ((lambda (var1 ... varn)
 ;    body) exp1 ... expn)
 (define (let->combination exp)
-  (cons (list 'lambda (let-exp-var-list exp) (let-exp-body exp)) (let-exp-exp-list exp)))
+  (if (named-let? exp)
+      (make-begin
+        (list
+            (make-definition
+              (named-let-exp-variable exp)
+              (make-lambda (named-let-exp-var-list exp) (named-let-exp-body exp)))
+            (cons
+              (make-lambda (named-let-exp-var-list exp) (named-let-exp-body exp))
+              (named-let-exp-exp-list exp))))
+      (cons (make-lambda (let-exp-var-list exp) (let-exp-body exp)) (let-exp-exp-list exp))))
+
+(define (named-let-exp-variable exp)
+  (cadr exp))
+
+(define (named-let? exp)
+  (not (pair? (cadr exp))))
+
+(define (named-let-exp-body exp)
+  (cdddr exp))
+
+(define (named-let-exp-var-list exp)
+  (extract-car (caddr exp)))
+
+(define (named-let-exp-exp-list exp)
+  (extract-cadr (caddr exp)))
 
 (define (let-exp-body exp)
-  (caddr exp))
+  (cddr exp))
 
 (define (let-exp-var-list exp)
   (extract-car (cadr exp)))
@@ -331,6 +357,8 @@
         (list 'assoc assoc)
         (list 'equal? equal?)
         (list '+ +)
+        (list '= =)
+        (list '- -)
         ))
 (define (primitive-procedure-names)
   (map car primitive-procedures))
@@ -385,3 +413,11 @@
 (let* ((x 3)
        (y x))
       (+ x y))
+(define (fib n)
+  (let fib-iter ((a 1)
+                 (b 0)
+                 (count n))
+       (if (= count 0)
+           b
+           (fib-iter (+ a b) a (- count 1)))))
+(fib 7)
