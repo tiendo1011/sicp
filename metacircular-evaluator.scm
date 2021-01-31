@@ -10,6 +10,7 @@
         ((lambda? exp) (make-procedure (lambda-parameters exp)
                                        (lambda-body exp)
                                        env))
+        ((let? exp) (m-eval (let->combination exp) env))
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (m-eval (cond->if exp) env))
@@ -173,6 +174,38 @@
                             (sequence->exp (cond-actions first))
                             (expand-clauses rest)))))))
 
+(define (let? exp) (tagged-list? exp 'let))
+
+; Expansion plan:
+; (let ((var1 exp1)
+;       ...
+;       (varn expn))
+;   body)
+; to
+; ((lambda (var1 ... varn)
+;    body) exp1 ... expn)
+(define (let->combination exp)
+  (cons (list 'lambda (let-exp-var-list exp) (let-exp-body exp)) (let-exp-exp-list exp)))
+
+(define (let-exp-body exp)
+  (caddr exp))
+
+(define (let-exp-var-list exp)
+  (extract-car (cadr exp)))
+
+(define (let-exp-exp-list exp)
+  (extract-cadr (cadr exp)))
+
+(define (extract-car list)
+  (if (null? list)
+    '()
+    (cons (caar list) (extract-car (cdr list)))))
+
+(define (extract-cadr list)
+  (if (null? list)
+    '()
+    (cons (cadar list) (extract-cadr (cdr list)))))
+
 (define (and? exp) (tagged-list? exp 'and))
 (define (and-clauses exp) (cdr exp))
 (define (and->if exp) (expand-and-clauses (and-clauses exp)))
@@ -279,6 +312,7 @@
         (list 'null? null?)
         (list 'assoc assoc)
         (list 'equal? equal?)
+        (list '+ +)
         ))
 (define (primitive-procedure-names)
   (map car primitive-procedures))
@@ -328,3 +362,5 @@
 (cond ((equal? 1 2) 1)
       ((assoc 'b '((a 1) (b 2))) => cadr)
       (else false))
+(let ((var1 1) (var2 2))
+  (+ 1 2))
