@@ -11,6 +11,7 @@
                                        (lambda-body exp)
                                        env))
         ((let? exp) (m-eval (let->combination exp) env))
+        ((let*? exp) (m-eval (let*->nested-lets exp) env))
         ((begin? exp)
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (m-eval (cond->if exp) env))
@@ -206,6 +207,23 @@
     '()
     (cons (cadar list) (extract-cadr (cdr list)))))
 
+(define (let*? exp) (tagged-list? exp 'let*))
+
+; Expansion plan:
+; (let* ((x 3)
+;        (y x))
+;       (* x y))
+; becomes:
+; (let ((x 3))
+;   (let ((y x)) (* x y)))
+(define (let*->nested-lets exp)
+  (build-nested-let (cadr exp) (caddr exp)))
+
+(define (build-nested-let var-list body)
+  (if (null? var-list)
+    body
+    (list 'let (list (car var-list)) (build-nested-let (cdr var-list) body))))
+
 (define (and? exp) (tagged-list? exp 'and))
 (define (and-clauses exp) (cdr exp))
 (define (and->if exp) (expand-and-clauses (and-clauses exp)))
@@ -364,3 +382,6 @@
       (else false))
 (let ((var1 1) (var2 2))
   (+ 1 2))
+(let* ((x 3)
+       (y x))
+      (+ x y))
