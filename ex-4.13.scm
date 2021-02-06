@@ -1,6 +1,7 @@
 ; I'd like it to remove all the binding in env
 ; Just to avoid any surprises
 
+(load "list-operation.scm")
 (define (clear-variable! var env)
   (if (eq? env the-empty-environment)
       'done
