@@ -5,6 +5,11 @@
       (car items)
       (list-ref (cdr items) (- n 1))))
 
+(define (set-list-ref items n val)
+  (if (= n 0)
+      (set-car! items val)
+      (set-list-ref (cdr items) (- n 1))))
+
 (define (list-ax-ref items n)
   (cond ((null? items) '())
         ((= n 0) (list-ax-ref (cdr items) (- n 1)))
@@ -198,3 +203,16 @@
 (define (make-cycle x)
   (set-cdr! (last-pair x) x)
   x)
+
+(define (remove-item-at-index items index)
+  (cond ((null? items) '())
+        ((eq? index 0) (cdr items))
+        (else
+          (cons
+            (car items)
+            (remove-item-at-index
+              (cdr items)
+              (- index 1))))))
+
+(define a (list 1 2 3))
+(display (remove-item-at-index a 4))
