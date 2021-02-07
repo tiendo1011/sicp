@@ -89,17 +89,22 @@
            (add-streams (scale-stream integrand dt) int))))
   int)
 
+; This proc from the book:
+; (define (solve f y0 dt)
+;   (define y (integral (delay dy) y0 dt))
+;   (define dy (stream-map f y))
+;   y)
+
+; yield error: y: undefined; cannot use before initialization
+; So I need to use another proc copied from the internet
+; so that I can run it here
+; Ref: https://github.com/sicp-lang/sicp/issues/28
 (define (solve f y0 dt)
-  (define y (integral (delay dy) y0 dt))
-  (define dy (stream-map f y))
+  (define y (integral (delay (force dy)) y0 dt))
+  (define dy (delay (stream-map f y)))
   y)
 
 (stream-ref (solve (lambda (y) y)
                    1
                    0.001)
             1000)
-; Running this result in an error:
-; y: undefined;
-;  cannot use before initialization
-; Seems like the call to (define dy) can't work with this newly introduced
-; delayed evaluation y
