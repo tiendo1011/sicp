@@ -1,5 +1,7 @@
-; We need to cut down some addtional methods since tslime
-; SendSelectionToTmux choke on long lines (about 538 lines)
+; The idea is that we'll solve (f a (b lazy)), then (f a (b lazy-memo)
+; and let's try it with something which will not work with applicative order evaluation
+; like try proc
+; Scroll down to the end of this file to see it in action
 
 #lang sicp
 (define (m-eval exp env)
@@ -36,7 +38,10 @@
            (procedure-body procedure)
            (extend-environment
              (procedure-parameters procedure)
-             (list-of-delayed-args arguments env)
+             (list-of-args-with-delayed-args-if-requested
+               (procedure-parameters procedure)
+               arguments
+               env)
              (procedure-environment procedure))))
         (else
           (error
@@ -48,8 +53,14 @@
 (define (delay-it exp env)
   (list 'thunk exp env))
 
+(define (delay-it-with-memo exp env)
+  (list 'memo-thunk exp env))
+
 (define (thunk? obj)
   (tagged-list? obj 'thunk))
+
+(define (memo-thunk? obj)
+  (tagged-list? obj 'memo-thunk))
 
 (define (thunk-exp thunk) (cadr
                             thunk))
@@ -63,7 +74,8 @@
   (cadr evaluated-thunk))
 
 (define (force-it obj)
-  (cond ((thunk? obj)
+  (cond ((thunk? obj) (actual-value (thunk-exp obj) (thunk-env obj)))
+        ((memo-thunk? obj)
          (let ((result (actual-value (thunk-exp obj)
                                      (thunk-env obj))))
               (set-car! obj 'evaluated-thunk)
@@ -85,13 +97,19 @@
             (list-of-arg-values (rest-operands exps)
                                 env))))
 
-(define (list-of-delayed-args exps env)
-  (if (no-operands? exps)
+(define (delay-if-necessary param arg env)
+  (if (pair? param)
+      (cond ((eq? (cadr param) 'lazy) (delay-it arg env))
+            ((eq? (cadr param) 'lazy-memo) (delay-it-with-memo arg env))
+            (else (error "Unsupported decorator")))
+      (actual-value arg env)))
+
+(define (list-of-args-with-delayed-args-if-requested params args env)
+  (if (no-operands? args)
       '()
-      (cons (delay-it (first-operand exps)
-                      env)
-            (list-of-delayed-args (rest-operands exps)
-                                  env))))
+      (cons (delay-if-necessary (first-operand params) (first-operand args) env)
+            (list-of-args-with-delayed-args-if-requested (rest-operands params) (rest-operands args)
+                                                         env))))
 
 (define (eval-if exp env)
   (if (true? (actual-value (if-predicate exp) env))
@@ -422,6 +440,7 @@
         (list '+ +)
         (list '= =)
         (list '- -)
+        (list '/ /)
         ))
 
 (define (primitive-procedure-names)
@@ -456,18 +475,15 @@
 (define the-global-environment (setup-environment))
 (driver-loop)
 
+; This should not work
 ; (define (try a b) (if (= a 0) 1 b))
 ; (try 0 (/ 1 0))
 
-(define (p1 x)
-  (set! x (cons x '(2)))
-  x)
+; This should work
+; (define (try a (b lazy))
+;   (if (= a 0) 1 b))
+; (try 0 (/ 1 0))
 
-(define (p2 x)
-  (define (p e)
-    e
-    x)
-  (p (set! x (cons x '(2)))))
-
-; (p1 1)
-(p2 1)
+(define (try a (b lazy-memo))
+  (if (= a 0) 1 b))
+(try 0 (/ 1 0))
