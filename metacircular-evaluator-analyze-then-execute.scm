@@ -267,7 +267,6 @@
        (define-variable! 'true true initial-env)
        (define-variable! 'false false initial-env)
        initial-env))
-(define the-global-environment (setup-environment))
 
 (define (primitive-procedure? proc)
   (tagged-list? proc 'primitive))
@@ -308,3 +307,5 @@
                      '<procedure-env>))
       (display object)))
 
+(define the-global-environment (setup-environment))
+(driver-loop)
