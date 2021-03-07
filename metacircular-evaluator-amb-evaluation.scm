@@ -1,5 +1,3 @@
-(load "list-operation.scm")
-
 (define (ambeval exp env succeed fail)
   ((analyze exp) env succeed fail))
 
@@ -8,8 +6,10 @@
         ((quoted? exp) (analyze-quoted exp))
         ((variable? exp) (analyze-variable exp))
         ((assignment? exp) (analyze-assignment exp))
+        ((permanent-assignment? exp) (analyze-permanent-assignment exp))
         ((definition? exp) (analyze-definition exp))
         ((if? exp) (analyze-if exp))
+        ((if-fail? exp) (analyze-if-fail exp))
         ((lambda? exp) (analyze-lambda exp))
         ((let? exp) (analyze (let->combination exp)))
         ((begin? exp) (analyze-sequence (begin-actions exp)))
@@ -74,6 +74,16 @@
                                                     (fail2)))))
                       fail))))
 
+(define (analyze-permanent-assignment exp)
+  (let ((var (assignment-variable exp))
+        (vproc (analyze (assignment-value exp))))
+       (lambda (env succeed fail)
+               (vproc env
+                      (lambda (val fail2)
+                              (set-variable-value! var val env)
+                              (succeed 'ok fail2))
+                      fail))))
+
 (define (analyze-definition exp)
   (let ((var (definition-variable exp))
         (vproc (analyze (definition-value exp))))
@@ -98,6 +108,21 @@
                                   (aproc env succeed fail2)))
                       ;; failure continuation for evaluating the predicate
                       fail))))
+
+(define (if-fail-first-exp exp)
+  (cadr exp))
+
+(define (if-fail-second-exp exp)
+  (caddr exp))
+
+(define (analyze-if-fail exp)
+  (let ((first-exp (analyze (if-fail-first-exp exp)))
+        (second-exp (analyze (if-fail-second-exp exp))))
+    (lambda (env succeed fail)
+      (first-exp env
+                 (lambda (val fail2)
+                   (succeed val fail2))
+                 (lambda () (second-exp env succeed fail))))))
 
 (define (analyze-lambda exp)
   (let ((vars (lambda-parameters exp))
@@ -224,6 +249,7 @@
       false))
 
 (define (assignment? exp) (tagged-list? exp 'set!))
+(define (permanent-assignment? exp) (tagged-list? exp 'permanent-set!))
 (define (assignment-variable exp) (cadr exp))
 (define (assignment-value exp) (caddr exp))
 
@@ -256,6 +282,8 @@
 
 (define (make-if predicate consequent alternative)
   (list 'if predicate consequent alternative))
+
+(define (if-fail? exp) (tagged-list? exp 'if-fail))
 
 (define (begin? exp) (tagged-list? exp 'begin))
 (define (begin-actions exp) (cdr exp))
@@ -383,6 +411,8 @@
         (list '> >)
         (list 'abs abs)
         (list '- -)
+        (list '+ +)
+        (list 'even? even?)
         ))
 (define (primitive-procedure-names)
   (map car primitive-procedures))
