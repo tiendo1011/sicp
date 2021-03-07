@@ -8,7 +8,7 @@
 (define (set-list-ref items n val)
   (if (= n 0)
       (set-car! items val)
-      (set-list-ref (cdr items) (- n 1))))
+      (set-list-ref (cdr items) (- n 1) val)))
 
 (define (list-ax-ref items n)
   (cond ((null? items) '())
@@ -214,5 +214,24 @@
               (cdr items)
               (- index 1))))))
 
-(define a (list 1 2 3))
-(display (remove-item-at-index a 4))
+(define (swap! a-list a-index b-index)
+  (let ((a-element (list-ref a-list a-index))
+        (b-element (list-ref a-list b-index)))
+       (set-list-ref a-list a-index b-element)
+       (set-list-ref a-list b-index a-element)))
+
+; How to shuffle a list?
+; Let's use Fisher-Yates algorithm
+; To shuffle an array a of n elements (indices 0..n-1):
+;   for i from n - 1 downto 1 do
+;        j = random integer with 0 <= j <= i
+;        exchange a[j] and a[i]
+
+(define (shuffle a-list)
+  (define (internal-shuffle the-list list-length)
+    (if (= list-length 1)
+        the-list
+        (let ((selected-index (random list-length)))
+             (swap! the-list selected-index (- list-length 1))
+             (internal-shuffle the-list (- list-length 1)))))
+  (internal-shuffle a-list (length a-list)))

@@ -23,12 +23,23 @@
 ; it ignores the “input sentence” and instead always succeeds
 ; and generates an appropriate word
 
-(define (random a-list)
-  (car a-list)) ; to simplify, use car but we can elaborate to do more
+; Ex-4.49 implementation for parse-word
+; (define (random a-list)
+;   (car a-list)) ; to simplify, use car but we can elaborate to do more
+
+; (define (parse-word word-list)
+;   (set! *unparsed* (cdr *unparsed*))
+;   (list (car word-list) (random (cdr word-list))))
+
+; Ex-4.50 implementation for parse-word
+(define (a-random-element-of items)
+  (require (not (null? items)))
+  (ramb (car items) (a-random-element-of (cdr items))))
 
 (define (parse-word word-list)
   (set! *unparsed* (cdr *unparsed*))
-  (list (car word-list) (random (cdr word-list))))
+  (list (car word-list) (a-random-element-of (cdr word-list))))
+; End of parse-word
 
 (define *unparsed* '())
 

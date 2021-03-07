@@ -1,3 +1,5 @@
+(load "list-operation.scm")
+
 (define (ambeval exp env succeed fail)
   ((analyze exp) env succeed fail))
 
@@ -13,6 +15,7 @@
         ((begin? exp) (analyze-sequence (begin-actions exp)))
         ((cond? exp) (analyze (cond->if exp)))
         ((amb? exp) (analyze-amb exp))
+        ((ramb? exp) (analyze-ramb exp))
         ((application? exp) (analyze-application exp))
         (else (error "Unknown expression type: ANALYZE" exp))))
 
@@ -181,7 +184,28 @@
                       (lambda () (try-next (cdr choices))))))
                (try-next cprocs))))
 
+(define (any l) (list-ref l (random (length l))))
+(define (remove-from x xs)
+  (cond ((null? xs) null)
+        ((equal? x (car xs)) (cdr xs))
+        (else (cons (car xs) (remove-from x (cdr xs))))))
+(define (ramb-choices exp) (cdr exp))
+
+(define (analyze-ramb exp)
+  (let ((cprocs (map analyze (ramb-choices exp))))
+    (lambda (env succeed fail)
+      (define (try-next choices)
+        (if (null? choices)
+            (fail)
+            (let ((choice (any choices)))
+              (choice env
+                      succeed
+                      (lambda ()
+                        (try-next (remove-from choice choices)))))))
+      (try-next cprocs))))
+
 (define (amb? exp) (tagged-list? exp 'amb))
+(define (ramb? exp) (tagged-list? exp 'ramb))
 (define (amb-choices exp) (cdr exp))
 
 (define (self-evaluating? exp)
