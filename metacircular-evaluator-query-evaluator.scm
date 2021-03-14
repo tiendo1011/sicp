@@ -54,6 +54,15 @@
               (delay (apply-rules query-pattern frame))))
     frame-stream))
 
+; This is to test ex-4.71.scm
+; (define (simple-query query-pattern frame-stream)
+;   (stream-flatmap
+;     (lambda (frame)
+;             (m-stream-append
+;               (find-assertions query-pattern frame)
+;               (apply-rules query-pattern frame)))
+;     frame-stream))
+
 (define (conjoin conjuncts frame-stream)
   (if (empty-conjunction? conjuncts)
       frame-stream
@@ -68,6 +77,17 @@
         (qeval (first-disjunct disjuncts) frame-stream)
         (delay (disjoin (rest-disjuncts disjuncts) frame-stream)))))
 (put 'or 'qeval disjoin)
+
+; This is to test ex-4.71.scm
+; (define (disjoin disjuncts frame-stream)
+;   (if (empty-disjunction? disjuncts)
+;       the-empty-stream
+;       (interleave
+;         (qeval (first-disjunct disjuncts)
+;                frame-stream)
+;         (disjoin (rest-disjuncts disjuncts)
+;                  frame-stream))))
+; (put 'or 'qeval disjoin)
 
 (define (negate operands frame-stream)
   (stream-flatmap
