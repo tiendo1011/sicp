@@ -100,6 +100,17 @@
     frame-stream))
 (put 'not 'qeval negate)
 
+(define (uniquely-asserted operands frame-stream)
+  (stream-flatmap
+    (lambda (frame)
+            (if (stream-unique-element?
+                  (qeval (unique-query operands)
+                         (singleton-stream frame)))
+                (singleton-stream frame)
+                the-empty-stream))
+    frame-stream))
+(put 'unique 'qeval uniquely-asserted)
+
 (define (lisp-value call frame-stream)
   (stream-flatmap
     (lambda (frame)
@@ -192,8 +203,8 @@
 (define (extend-if-possible var val frame)
   (let ((binding (binding-in-frame var frame)))
        (cond (binding
-               (unify-match (binding-value binding) val frame)) ; ***
-             ((var? val)
+               (unify-match (binding-value binding) val frame))
+             ((var? val) ; ***
               (let ((binding (binding-in-frame val frame)))
                    (if binding
                        (unify-match
@@ -337,6 +348,7 @@
 (define (first-disjunct exps) (car exps))
 (define (rest-disjuncts exps) (cdr exps))
 (define (negated-query exps) (car exps))
+(define (unique-query exps) (car exps))
 (define (predicate exps) (car exps))
 (define (args exps) (cdr exps))
 

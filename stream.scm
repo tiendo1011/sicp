@@ -8,6 +8,14 @@
 (define (stream-car s) (car s))
 (define (stream-cdr s) (force (cdr s)))
 
+(define (stream-unique-element? s)
+  (cond ((stream-null? s) false)
+        ((and
+           (not (null? (stream-car s)))
+           (stream-null? (stream-cdr s)))
+         true)
+        (else false)))
+
 (define (stream-enumerate-interval low high)
   (if (> low high)
       the-empty-stream
@@ -21,11 +29,11 @@
       (cons-stream (stream-car s1)
                    (m-stream-append (stream-cdr s1) s2))))
 
-(define (stream-map proc s)
-  (if (stream-null? s)
-      the-empty-stream
-      (cons-stream (proc (stream-car s))
-                   (stream-map proc (stream-cdr s)))))
+; (define (stream-map proc s)
+;   (if (stream-null? s)
+;       the-empty-stream
+;       (cons-stream (proc (stream-car s))
+;                    (stream-map proc (stream-cdr s)))))
 
 (define (stream-map proc . argstreams)
   (if (stream-null? (car argstreams))
@@ -105,14 +113,14 @@ stream))
                          (merge (stream-cdr s1)
                                 (stream-cdr s2)))))))))
 
-(define (memo-proc proc)
-  (let ((already-run? false) (result false))
-       (lambda ()
-               (if (not already-run?)
-                   (begin (set! result (proc))
-                          (set! already-run? true)
-                          result)
-                   result))))
+; (define (memo-proc proc)
+;   (let ((already-run? false) (result false))
+;        (lambda ()
+;                (if (not already-run?)
+;                    (begin (set! result (proc))
+;                           (set! already-run? true)
+;                           result)
+;                    result))))
 
 ; equals to
 (define memo-proc (lambda (proc)
