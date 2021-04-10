@@ -4,26 +4,32 @@
 (load "metacircular-evaluator-query-evaluator.scm")
 
 (define (conjoin conjuncts frame-stream)
-  (if (empty-conjunction? conjuncts)
-      frame-stream
-      (unify-frame-streams
-        (qeval (first-conjunct conjuncts) frame-stream)
-        (conjoin (rest-conjuncts conjuncts) frame-stream))))
+  (cond ((empty-conjunction? conjuncts) the-empty-stream)
+        ((single-conjunction? conjuncts) (qeval (first-conjunct conjuncts) frame-stream))
+        (else (unify-frame-streams
+                (qeval (first-conjunct conjuncts) frame-stream)
+                (conjoin (rest-conjuncts conjuncts) frame-stream)))))
+
 (put 'and 'qeval conjoin)
+
+(define (single-conjunction? exps) (and (pair? exps) (null? (cdr exps))))
 
 (define (unify-frame-streams s1 s2)
   (if (stream-null? s1)
-      s2
+      the-empty-stream
       (interleave-delayed
         (unify-frame-with-frame-stream (stream-car s1) s2)
         (delay (unify-frame-streams (stream-cdr s1) s2)))))
 
 (define (unify-frame-with-frame-stream f1 s2)
   (if (stream-null? s2)
-    (cons-stream f1 '())
-    (cons-stream
-      (unify-frames f1 (stream-car s2))
-      (unify-frame-with-frame-stream f1 (stream-cdr s2)))))
+    the-empty-stream
+    (let ((unified-result (unify-frames f1 (stream-car s2))))
+      (if (equal? unified-result 'failed)
+          (unify-frame-with-frame-stream f1 (stream-cdr s2))
+          (cons-stream
+            unified-result
+            (unify-frame-with-frame-stream f1 (stream-cdr s2)))))))
 
 (define (unify-frames f1 f2)
   (cond ((pair? f1)
@@ -37,17 +43,9 @@
 
 (query-driver-loop)
 
+(assert! (job (Bit Ben) (computer wizard)))
 (assert! (job (Bitdiddle Ben) (computer wizard)))
 (assert! (address (Bitdiddle Ben) (Slumerville (Ridge Road) 10)))
 ; (job ?x ?y)
-; (and (job ?x ?y) (job ?x ?y))
 (and (job ?x ?y) (address ?x ?z))
-
-;;; current query results:
-; (and (job (Bitdiddle Ben) (computer wizard)) (address (Bitdiddle Ben) (Slumerville (Ridge Road) 10)))
-; (and (job (Bitdiddle Ben) ?y) (address (Bitdiddle Ben) (Slumerville (Ridge Road) 10)))
-; (and (job (Bitdiddle Ben) (computer wizard)) (address (Bitdiddle Ben) ?z))
-; (and (job ?x ?y) (address ?x ?z))
-; (and (job (Bitdiddle Ben) (computer wizard)) (address (Bitdiddle Ben) (Slumerville (Ridge Road) 10)))
-; (and (job (Bitdiddle Ben) ?y) (address (Bitdiddle Ben) (Slumerville (Ridge Road) 10)))
-; (and (job (Bitdiddle Ben) (computer wizard)) (address (Bitdiddle Ben) ?z))
+(and (job ?x ?y) (address ?x ?y))
