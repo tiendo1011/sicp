@@ -18,6 +18,6 @@
   (test (op >) (reg counter) (reg n))
   (branch (label factorial-done))
   (assign product (op *) (reg counter) (reg product))
-  (assign counter (reg counter) (const 1))
+  (assign counter (op +) (reg counter) (const 1))
   (goto (label test-counter))
   factorial-done)
