@@ -1,19 +1,19 @@
 ; sample uses
-(define gcd-machine
-  (make-machine
-    '(a b t)
-    (list (list 'rem remainder) (list '= =))
-    '(test-b (test (op =) (reg b) (const 0))
-      (branch (label gcd-done))
-      (assign t (op rem) (reg a) (reg b))
-      (assign a (reg b))
-      (assign b (reg t))
-      (goto (label test-b))
-      gcd-done)))
-(set-register-contents! gcd-machine 'a 206) ; done
-(set-register-contents! gcd-machine 'b 40) ; done
-(start gcd-machine) ; done
-(get-register-contents gcd-machine 'a) ; 2
+; (define gcd-machine
+;   (make-machine
+;     '(a b t)
+;     (list (list 'rem remainder) (list '= =))
+;     '(test-b (test (op =) (reg b) (const 0))
+;       (branch (label gcd-done))
+;       (assign t (op rem) (reg a) (reg b))
+;       (assign a (reg b))
+;       (assign b (reg t))
+;       (goto (label test-b))
+;       gcd-done)))
+; (set-register-contents! gcd-machine 'a 206) ; done
+; (set-register-contents! gcd-machine 'b 40) ; done
+; (start gcd-machine) ; done
+; (get-register-contents gcd-machine 'a) ; 2
 ; end of sample uses
 
 (define (make-machine register-names ops controller-text)
@@ -41,21 +41,39 @@
   ((register 'set) value))
 
 (define (make-stack)
-  (let ((s '()))
-       (define (push x) (set! s (cons x s)))
+  (let ((s '())
+        (number-pushes 0)
+        (max-depth 0)
+        (current-depth 0))
+       (define (push x)
+         (set! s (cons x s))
+         (set! number-pushes (+ 1 number-pushes))
+         (set! current-depth (+ 1 current-depth))
+         (set! max-depth (max current-depth max-depth)))
        (define (pop)
          (if (null? s)
              (error "Empty stack: POP")
              (let ((top (car s)))
                   (set! s (cdr s))
+                  (set! current-depth (- current-depth 1))
                   top)))
        (define (initialize)
          (set! s '())
+         (set! number-pushes 0)
+         (set! max-depth 0)
+         (set! current-depth 0)
          'done)
+       (define (print-statistics)
+         (newline)
+         (display (list 'total-pushes
+                        '= number-pushes
+                        'maximum-depth '= max-depth)))
        (define (dispatch message)
          (cond ((eq? message 'push) push)
                ((eq? message 'pop) (pop))
                ((eq? message 'initialize) (initialize))
+               ((eq? message 'print-statistics)
+                (print-statistics))
                (else (error "Unknown request: STACK" message))))
        dispatch))
 (define (pop stack) (stack 'pop))
@@ -67,8 +85,11 @@
         (stack (make-stack))
         (the-instruction-sequence '()))
        (let ((the-ops
-               (list (list 'initialize-stack
-                           (lambda () (stack 'initialize)))))
+               (list
+                 (list 'initialize-stack
+                       (lambda () (stack 'initialize)))
+                 (list 'print-stack-statistics
+                       (lambda () (stack 'print-statistics)))))
              (register-table
                (list (list 'pc pc) (list 'flag flag))))
             (define (allocate-register name)
@@ -288,3 +309,53 @@
                 (lambda () (action-proc) (advance-pc pc)))
            (error "Bad PERFORM instruction: ASSEMBLE" inst))))
 (define (perform-action inst) (cdr inst))
+
+(define (make-primitive-exp exp machine labels)
+  (cond ((constant-exp? exp)
+         (let ((c (constant-exp-value exp)))
+              (lambda () c)))
+        ((label-exp? exp)
+         (let ((insts (lookup-label
+                        labels
+                        (label-exp-label exp))))
+              (lambda () insts)))
+        ((register-exp? exp)
+         (let ((r (get-register machine (register-exp-reg exp))))
+              (lambda () (get-contents r))))
+        (else (error "Unknown expression type: ASSEMBLE" exp))))
+
+(define (tagged-list? exp tag)
+  (if (pair? exp)
+      (eq? (car exp) tag)
+      false))
+(define (register-exp? exp) (tagged-list? exp 'reg))
+(define (register-exp-reg exp) (cadr exp))
+(define (constant-exp? exp) (tagged-list? exp 'const))
+(define (constant-exp-value exp) (cadr exp))
+(define (label-exp? exp) (tagged-list? exp 'label))
+(define (label-exp-label exp) (cadr exp))
+
+(define (make-operation-exp exp machine labels operations)
+  (let ((op (lookup-prim (operation-exp-op exp)
+                         operations))
+        (aprocs
+          (map (lambda (e)
+                       (if (label-exp? e)
+                           (error "can't work with label: MAKE-OPERATION-EXP")
+                           (make-primitive-exp e machine labels)))
+               (operation-exp-operands exp))))
+       (lambda ()
+               (apply op (map (lambda (p) (p)) aprocs)))))
+(define (operation-exp? exp)
+  (and (pair? exp) (tagged-list? (car exp) 'op)))
+(define (operation-exp-op operation-exp)
+  (cadr (car operation-exp)))
+(define (operation-exp-operands operation-exp)
+  (cdr operation-exp))
+
+(define (lookup-prim symbol operations)
+  (let ((val (assoc symbol operations)))
+       (if val
+           (cadr val)
+           (error "Unknown operation: ASSEMBLE"
+                  symbol))))
