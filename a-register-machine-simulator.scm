@@ -16,6 +16,7 @@
 ; (get-register-contents gcd-machine 'a) ; 2
 ; end of sample uses
 
+(load "list-operation.scm")
 (define (make-machine register-names ops controller-text)
   (let ((machine (make-new-machine)))
        (for-each
@@ -83,7 +84,9 @@
   (let ((pc (make-register 'pc))
         (flag (make-register 'flag))
         (stack (make-stack))
-        (the-instruction-sequence '()))
+        (the-instruction-sequence '())
+        (breakpoints '())
+        (current-inst '()))
        (let ((the-ops
                (list
                  (list 'initialize-stack
@@ -104,13 +107,59 @@
                    (if val
                        (cadr val)
                        (error "Unknown register:" name))))
+            (define (set-breakpoint label line)
+              (set! breakpoints (cons (make-breakpoint label line) breakpoints)))
+            (define (cancel-breakpoint label line)
+              (let ((new-breakpoints (filter
+                                       (lambda (breakpoint)
+                                               (or
+                                                 (not (equal?
+                                                        label
+                                                        (get-label-from-breakpoint breakpoint)))
+                                                 (not (equal?
+                                                        line
+                                                        (get-line-from-breakpoint breakpoint)))))
+                                       breakpoints)))
+                (set! breakpoints new-breakpoints)))
+            (define (cancel-all-breakpoints)
+              (set! breakpoints '()))
+            (define (make-breakpoint label line)
+              (cons label line))
+            (define (get-label-from-breakpoint breakpoint)
+              (car breakpoint))
+            (define (get-line-from-breakpoint breakpoint)
+              (cdr breakpoint))
+            (define (breakpoint-set-for-inst? inst)
+              ; inst has this form: (text proc meta-data)
+              ; with meta-data as (label line)
+              ; breakpoint has this form (label line)
+              (define (breakpoint-set-iter breakpoints meta-data)
+                (cond ((null? breakpoints) false)
+                      ((and
+                         (equal?
+                           (get-label-from-meta-data meta-data)
+                           (get-label-from-breakpoint (car breakpoints)))
+                         (equal?
+                           (get-line-from-meta-data meta-data)
+                           (get-line-from-breakpoint (car breakpoints))))
+                       true)
+                      (else (breakpoint-set-iter (cdr breakpoints) meta-data))))
+              (let ((meta-data (get-meta-data inst)))
+                (breakpoint-set-iter breakpoints meta-data)))
+
             (define (execute)
               (let ((insts (get-contents pc)))
                    (if (null? insts)
                        'done
-                       (begin
-                         ((instruction-execution-proc (car insts)))
-                         (execute)))))
+                       (let ((inst (car insts)))
+                            (if (breakpoint-set-for-inst? inst)
+                                (set! current-inst inst)
+                                (begin
+                                  ((instruction-execution-proc inst))
+                                  (execute)))))))
+            (define (cont-execution)
+              ((instruction-execution-proc current-inst))
+              (execute))
             (define (dispatch message)
               (cond ((eq? message 'start)
                      (set-contents! pc the-instruction-sequence)
@@ -127,6 +176,11 @@
                              (set! the-ops (append the-ops ops))))
                     ((eq? message 'stack) stack)
                     ((eq? message 'operations) the-ops)
+                    ((eq? message 'set-breakpoint) set-breakpoint)
+                    ((eq? message 'cancel-breakpoint) cancel-breakpoint)
+                    ((eq? message 'cancel-all-breakpoints) (cancel-all-breakpoints))
+                    ((eq? message 'view-all-breakpoints) (display breakpoints))
+                    ((eq? message 'cont-execution) (cont-execution))
                     (else (error "Unknown request: MACHINE"
                                  message))))
             dispatch)))
@@ -139,6 +193,16 @@
   'done)
 (define (get-register machine reg-name)
   ((machine 'get-register) reg-name))
+(define (set-breakpoint machine label line)
+  ((machine 'set-breakpoint) label line))
+(define (view-all-breakpoints machine)
+  (machine 'view-all-breakpoints))
+(define (proceed-machine machine)
+  (machine 'cont-execution))
+(define (cancel-breakpoint machine label line)
+  ((machine 'cancel-breakpoint) label line))
+(define (cancel-all-breakpoints machine)
+  (machine 'cancel-all-breakpoints))
 
 (define (assemble controller-text machine)
   (extract-labels
@@ -163,10 +227,17 @@
                      (if (symbol? next-inst)
                        (if (label-exists? labels next-inst)
                          (error "Label existed: EXTRACT-LABLES" next-inst)
-                         (receive insts
-                                  (cons (make-label-entry next-inst
-                                                          insts)
-                                        labels)))
+                         (begin
+                           ; since insts is repeated inside each label
+                           ; this can result in adding metadata to inst
+                           ; multiple time, we need to test to check
+                           ; if the metata exists
+                           ; then we should not add it
+                           (add-meta-data-to-insts! insts next-inst)
+                           (receive insts
+                                    (cons (make-label-entry next-inst
+                                                            insts)
+                                          labels))))
                          (receive (cons (make-instruction next-inst)
                                         insts)
                                   labels)))))))
@@ -184,11 +255,33 @@
                      (instruction-text inst)
                      labels machine pc flag stack ops)))
          insts)))
-(define (make-instruction text) (cons text '()))
+
+; inst will have form (list text proc meta-data)
+(define (make-instruction text) (list text '() '()))
 (define (instruction-text inst) (car inst))
-(define (instruction-execution-proc inst) (cdr inst))
+(define (instruction-execution-proc inst) (cadr inst))
 (define (set-instruction-execution-proc! inst proc)
-  (set-cdr! inst proc))
+  (let ((meta-data (get-meta-data inst)))
+       (set-cdr! inst (list proc meta-data))))
+(define (get-meta-data inst)
+  (caddr inst))
+(define (add-meta-data-to-inst! inst meta-data)
+  (if (null? (get-meta-data inst)) ; only add meta-data if not added already
+      (set-cdr! (cdr inst) (list meta-data))))
+(define (make-meta-data label count)
+  (cons label count))
+(define (get-label-from-meta-data meta-data)
+  (car meta-data))
+(define (get-line-from-meta-data meta-data)
+  (cdr meta-data))
+
+(define (add-meta-data-to-insts! insts label)
+  (let ((count 1))
+       (for-each (lambda (inst)
+                         (let ((meta-data (make-meta-data label count)))
+                              (add-meta-data-to-inst! inst meta-data)
+                              (set! count (+ count 1))))
+                 insts)))
 
 (define (make-label-entry label-name insts)
   (cons label-name insts))
